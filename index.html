@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ระบบตรวจสอบการเช็คอิน TSM ด้วยเทคโนโลยี Geolocation">
+    <title>TSM Check-in System</title>
+    
+    <!-- External Resources -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <!-- Inline Critical CSS -->
+    <style>
+        :root {
+            --neon-green: #00ff00;
+            --background-dark: #0a0a0a;
+            --card-bg: rgba(20, 20, 20, 0.95);
+            --error-red: #ff4444;
+        }
+
+        /* Base Styles */
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: var(--background-dark);
+            color: var(--neon-green);
+        }
+
+        /* Utility Classes */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        /* Card Component */
+        .checkin-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            width: min(90%, 400px);
+            box-shadow: 0 0.5rem 2rem rgba(0, 255, 0, 0.1);
+        }
+
+        /* Form Elements */
+        .geo-input {
+            border: 2px solid var(--neon-green);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            background: transparent;
+            width: 100%;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .geo-input:focus {
+            outline: none;
+            box-shadow: 0 0 1rem rgba(0, 255, 0, 0.3);
+        }
+
+        /* Animations */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        .neon-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .checkin-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="checkin-card">
+        <h1 class="heading-lg neon-glow">
+            <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+            TSM Check-in System
+        </h1>
+        
+        <form id="checkinForm" novalidate>
+            <div class="form-group">
+                <label for="userName" class="sr-only">ชื่อผู้ใช้</label>
+                <input 
+                    type="text" 
+                    id="userName" 
+                    class="geo-input" 
+                    placeholder="ชื่อ-นามสกุล"
+                    required
+                    pattern="[\p{L}\s]{2,50}"
+                    title="กรุณากรอกชื่อจริงเป็นภาษาไทยหรืออังกฤษ"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="geoCoordinates" class="sr-only">พิกัดภูมิศาสตร์</label>
+                <input
+                    type="text"
+                    id="geoCoordinates"
+                    class="geo-input"
+                    readonly
+                    aria-describedby="geoHelp"
+                >
+                <small id="geoHelp" class="help-text">ระบบจะบันทึกพิกัดอัตโนมัติ</small>
+            </div>
+
+            <div class="action-buttons">
+                <button 
+                    type="button" 
+                    class="geo-btn"
+                    id="getLocationBtn"
+                    aria-label="ดึงพิกัดปัจจุบัน"
+                >
+                    <i class="fas fa-crosshairs" aria-hidden="true"></i>
+                    ดึงพิกัดอัตโนมัติ
+                </button>
+                
+                <button 
+                    type="submit" 
+                    class="geo-btn neon-glow"
+                    id="submitBtn"
+                    aria-live="polite"
+                >
+                    <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+                    บันทึกข้อมูล
+                </button>
+            </div>
+        </form>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="site-footer">
+        <p class="footer-text">ออกแบบและพัฒนาโดย</p>
+        <p class="footer-credit">นักวิชาการโสตฯ ศุภฤกษ์ เนตรแก้ว</p>
+        <p class="footer-org">รพ.สมเด็จพระเจ้าตากสินมหาราช</p>
+    </footer>
+
+    <!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    
+    <!-- Application Script -->
+    <script type="module">
+        // Configuration Constants
+        const CONFIG = {
+            TARGET_LAT: 16.872816,
+            TARGET_LNG: 99.131639,
+            ALLOWED_RADIUS: 12, // meters
+            GEOLOCATION_OPTIONS: {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            },
+            API_ENDPOINT: 'https://script.google.com/macros/s/AKfycbyTmELpnUute3Nk4KraqcPUnWFcISA8P91GAYHM3rgPV8my-CcWWkvfKRC0ewg2Dg3_HA/exec'
+        };
+
+        // DOM Elements
+        const formElements = {
+            form: document.getElementById('checkinForm'),
+            nameInput: document.getElementById('userName'),
+            coordInput: document.getElementById('geoCoordinates'),
+            locationBtn: document.getElementById('getLocationBtn'),
+            submitBtn: document.getElementById('submitBtn')
+        };
+
+        // Utility Functions
+        const showAlert = (config) => {
+            return Swal.fire({
+                ...config,
+                background: '#0a0a0a',
+                color: '#00ff00',
+                customClass: {
+                    confirmButton: 'swal-confirm-btn'
+                }
+            });
+        };
+
+        const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+            const toRadians = (degree) => degree * (Math.PI / 180);
+            const R = 6371e3; // Earth radius in meters
+            
+            const φ1 = toRadians(lat1);
+            const φ2 = toRadians(lat2);
+            const Δφ = toRadians(lat2 - lat1);
+            const Δλ = toRadians(lon2 - lon1);
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            
+            return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        };
+
+        // Geolocation Handler
+        const handleGeolocation = async () => {
+            if (!navigator.geolocation) {
+                showAlert({
+                    title: 'ไม่รองรับ',
+                    text: 'เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง',
+                    icon: 'error'
+                });
+                return;
+            }
+
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, CONFIG.GEOLOCATION_OPTIONS);
+                });
+
+                const { latitude, longitude } = position.coords;
+                formElements.coordInput.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                
+                const distance = calculateHaversineDistance(
+                    latitude, longitude,
+                    CONFIG.TARGET_LAT, CONFIG.TARGET_LNG
+                );
+
+                showAlert({
+                    title: 'ตำแหน่งปัจจุบัน',
+                    html: `ระยะห่างจากจุดตรวจ: <strong>${distance.toFixed(2)} เมตร</strong>`,
+                    icon: 'success'
+                });
+
+            } catch (error) {
+                console.error('Geolocation Error:', error);
+                showAlert({
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถระบุตำแหน่งได้: ' + error.message,
+                    icon: 'error'
+                });
+            }
+        };
+
+        // Form Submission Handler
+        const handleFormSubmit = async (event) => {
+            event.preventDefault();
+            
+            // Validation Check
+            if (!formElements.coordInput.value) {
+                showAlert({
+                    title: 'ข้อมูลไม่ครบ',
+                    text: 'กรุณาดึงพิกัดก่อนบันทึกข้อมูล',
+                    icon: 'warning'
+                });
+                return;
+            }
+
+            // Prepare Data
+            const formData = new FormData();
+            formData.append('name', formElements.nameInput.value.trim());
+            formData.append('timestamp', new Date().toISOString());
+            formData.append('coordinates', formElements.coordInput.value);
+
+            try {
+                // Submit Data
+                const response = await fetch(CONFIG.API_ENDPOINT, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Network Error');
+
+                showAlert({
+                    title: 'สำเร็จ!',
+                    text: 'บันทึกข้อมูลเรียบร้อย',
+                    icon: 'success'
+                });
+
+                formElements.form.reset();
+
+            } catch (error) {
+                console.error('Submission Error:', error);
+                showAlert({
+                    title: 'ส่งข้อมูลล้มเหลว',
+                    text: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+                    icon: 'error'
+                });
+            }
+        };
+
+        // Event Listeners
+        formElements.locationBtn.addEventListener('click', handleGeolocation);
+        formElements.form.addEventListener('submit', handleFormSubmit);
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
