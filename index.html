@@ -4,15 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ตำแหน่งจุดตรวจ</title>
+    <!-- เพิ่ม CSS ของ Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        /* กำหนดขนาดแผนที่ */
         #map {
             height: 500px;
             width: 100%;
         }
+        /* ปรับแต่ง Popup */
         .leaflet-popup-content {
             font-size: 14px;
             font-family: Arial, sans-serif;
+        }
+        /* สไตล์สำหรับลูกศรแสดงทิศทาง */
+        .arrow-icon {
+            background: none;
+            border: none;
         }
     </style>
 </head>
@@ -20,14 +28,21 @@
     <h1>ตำแหน่งจุดตรวจ</h1>
     <div id="map"></div>
 
+    <!-- เพิ่ม JavaScript ของ Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map').setView([16.8725, 99.1315], 16);
+        // ตำแหน่งเริ่มต้นของแผนที่ (ศูนย์กลางแผนที่)
+        var center = [16.8725, 99.1315];
 
+        // สร้างแผนที่และตั้งค่าพื้นหลังเป็น OpenStreetMap
+        var map = L.map('map').setView(center, 16); // 16 คือระดับการซูม
+
+        // ใช้ OpenStreetMap เป็นพื้นหลัง
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
+        // ตำแหน่งที่ปักหมุด
         var locations = [
             { id: 1, lat: 16.872816, lng: 99.131639, title: 'จุดเช็คอินที่ 1 ชั้น6' },
             { id: 2, lat: 16.872282, lng: 99.131993, title: 'จุดเช็คอินที่ 2 จิตเวช' },
@@ -36,42 +51,61 @@
             { id: 5, lat: 16.872666, lng: 99.132061, title: 'จุดเช็คอินที่ 5 มูลนิธิ' }
         ];
 
+        // ปักหมุดตำแหน่งต่างๆ
         locations.forEach(function(location) {
-            L.marker([location.lat, location.lng])
+            // สร้าง Marker และ Popup
+            var marker = L.marker([location.lat, location.lng])
                 .addTo(map)
-                .bindPopup(location.title);
+                .bindPopup(location.title); // แสดงข้อความเมื่อคลิกที่ Marker
         });
 
-        // เพิ่มตำแหน่งผู้ใช้
+        // สร้าง Icon สำหรับลูกศรแสดงทิศทาง
+        var arrowIcon = L.icon({
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png', // URL ของรูปภาพลูกศร
+            iconSize: [25, 41], // ขนาดของ Icon
+            iconAnchor: [12, 41], // จุด Anchor ของ Icon
+            popupAnchor: [1, -34], // จุด Anchor ของ Popup
+            className: 'arrow-icon' // เพิ่มคลาสเพื่อปรับแต่งสไตล์
+        });
+
+        // ตัวแปรสำหรับเก็บ Marker ของตำแหน่งปัจจุบัน
+        var currentLocationMarker;
+
+        // ฟังก์ชันสำหรับอัพเดทตำแหน่งปัจจุบัน
+        function updateLocation(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            var heading = position.coords.heading || 0; // ทิศทาง (ถ้ามี)
+
+            // ถ้ามี Marker อยู่แล้วให้ลบออก
+            if (currentLocationMarker) {
+                map.removeLayer(currentLocationMarker);
+            }
+
+            // สร้าง Marker สำหรับตำแหน่งปัจจุบัน
+            currentLocationMarker = L.marker([lat, lng], {
+                icon: arrowIcon,
+                rotationAngle: heading // หมุน Icon ตามทิศทาง
+            }).addTo(map);
+
+            // เคลื่อนแผนที่ไปที่ตำแหน่งปัจจุบัน
+            map.setView([lat, lng], 16);
+        }
+
+        // ฟังก์ชันสำหรับจัดการข้อผิดพลาด
+        function handleLocationError(error) {
+            console.error('เกิดข้อผิดพลาดในการดึงตำแหน่ง: ', error.message);
+        }
+
+        // ดึงตำแหน่งปัจจุบันและอัพเดทแบบเรียลไทม์
         if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(function(position) {
-                var userLocation = [position.coords.latitude, position.coords.longitude];
-
-                // สร้าง Marker สำหรับตำแหน่งผู้ใช้ หรือถ้ามีอยู่แล้วให้ปรับตำแหน่ง
-                if (userMarker) {
-                    userMarker.setLatLng(userLocation);
-                } else {
-                    userMarker = L.marker(userLocation).addTo(map);
-                }
-
-                // ปรับศูนย์กลางแผนที่ตามตำแหน่งผู้ใช้
-                map.setView(userLocation, 16);
-
-                // สร้างลูกศรแสดงทิศทาง
-                var arrow = L.polyline([userLocation, userLocation], {color: 'red'}).addTo(map);
-
-                // ปรับทิศทางของลูกศร
-                var bearing = position.coords.heading || 0; // ใช้ค่า heading หรือ 0 ถ้าไม่สามารถระบุได้
-                var rad = bearing * Math.PI / 180;
-                var latOffset = 0.0001 * Math.cos(rad);
-                var lngOffset = 0.0001 * Math.sin(rad);
-                arrow.setLatLngs([userLocation, [userLocation[0] + latOffset, userLocation[1] + lngOffset]]);
-
-            }, function(error) {
-                console.error("Error getting location:", error);
+            navigator.geolocation.watchPosition(updateLocation, handleLocationError, {
+                enableHighAccuracy: true,
+                maximumAge: 10000,
+                timeout: 5000
             });
         } else {
-            alert("Geolocation is not supported by this browser.");
+            alert('เบราว์เซอร์ของคุณไม่รองรับ Geolocation');
         }
     </script>
 </body>
