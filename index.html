@@ -17,15 +17,10 @@
             font-size: 14px;
             font-family: Arial, sans-serif;
         }
-        /* สไตล์สำหรับลูกศรแสดงทิศทาง */
-        .arrow-icon {
-            background: none;
-            border: none;
-        }
     </style>
 </head>
 <body>
-    <h1>ตำแหน่งจุดตรวจ</h1>
+    
     <div id="map"></div>
 
     <!-- เพิ่ม JavaScript ของ Leaflet -->
@@ -57,56 +52,8 @@
             var marker = L.marker([location.lat, location.lng])
                 .addTo(map)
                 .bindPopup(location.title); // แสดงข้อความเมื่อคลิกที่ Marker
+                
         });
-
-        // สร้าง Icon สำหรับลูกศรแสดงทิศทาง
-        var arrowIcon = L.icon({
-            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png', // URL ของรูปภาพลูกศร
-            iconSize: [25, 41], // ขนาดของ Icon
-            iconAnchor: [12, 41], // จุด Anchor ของ Icon
-            popupAnchor: [1, -34], // จุด Anchor ของ Popup
-            className: 'arrow-icon' // เพิ่มคลาสเพื่อปรับแต่งสไตล์
-        });
-
-        // ตัวแปรสำหรับเก็บ Marker ของตำแหน่งปัจจุบัน
-        var currentLocationMarker;
-
-        // ฟังก์ชันสำหรับอัพเดทตำแหน่งปัจจุบัน
-        function updateLocation(position) {
-            var lat = position.coords.latitude;
-            var lng = position.coords.longitude;
-            var heading = position.coords.heading || 0; // ทิศทาง (ถ้ามี)
-
-            // ถ้ามี Marker อยู่แล้วให้ลบออก
-            if (currentLocationMarker) {
-                map.removeLayer(currentLocationMarker);
-            }
-
-            // สร้าง Marker สำหรับตำแหน่งปัจจุบัน
-            currentLocationMarker = L.marker([lat, lng], {
-                icon: arrowIcon,
-                rotationAngle: heading // หมุน Icon ตามทิศทาง
-            }).addTo(map);
-
-            // เคลื่อนแผนที่ไปที่ตำแหน่งปัจจุบัน
-            map.setView([lat, lng], 16);
-        }
-
-        // ฟังก์ชันสำหรับจัดการข้อผิดพลาด
-        function handleLocationError(error) {
-            console.error('เกิดข้อผิดพลาดในการดึงตำแหน่ง: ', error.message);
-        }
-
-        // ดึงตำแหน่งปัจจุบันและอัพเดทแบบเรียลไทม์
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(updateLocation, handleLocationError, {
-                enableHighAccuracy: true,
-                maximumAge: 10000,
-                timeout: 5000
-            });
-        } else {
-            alert('เบราว์เซอร์ของคุณไม่รองรับ Geolocation');
-        }
     </script>
 </body>
 </html>
