@@ -165,7 +165,7 @@
 
     <script>
         // ตั้งค่า Google Apps Script URL
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwnpzfyIxKvkKjl-xMPtG-CW2QOilEi54HZGS-_nunkXEO4tdUb3-LNZewJt7lATkwJXg/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbyLYQu5zmYH5p-QPz8OQAOZ_DloF4N6tlJrwT8ZEI4i1_RsTdVLK2nXIY_o_KBSyEAq/exec';
         
         // ตั้งค่าจุดเช็คอิน (สามารถเพิ่มได้หลายจุด)
         const CHECK_POINTS = [
@@ -287,57 +287,71 @@
                 return;
             }
 
-            const [latitude, longitude] = coordinates.split(',').map(Number);
-            const checkResult = checkAllLocations(latitude, longitude);
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-            if (!checkResult.valid) {
-                Swal.fire({
-                    title: 'ไม่อยู่ในพื้นที่เช็คอิน',
-                    text: `คุณอยู่นอกพื้นที่เช็คอินที่กำหนด (รัศมีอนุญาต: ${CHECK_POINTS.map(p => p.radius + 'm').join('/')})`,
-                    icon: 'error',
-                    confirmButtonText: 'ตกลง',
-                    background: '#000',
-                    color: '#00ff00'
-                });
-                return;
-            }
+  const name = document.getElementById('name').value;
+  const coordinates = document.getElementById('coordinates').value;
 
-            try {
-                const response = await fetch(scriptURL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        latitude: latitude,
-                        longitude: longitude,
-                        check_point: checkResult.pointName,
-                        distance: checkResult.distance.toFixed(2),
-                        timestamp: new Date().toISOString()
-                    })
-                });
+  if (!name || !coordinates) {
+    Swal.fire({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      text: 'กรุณากรอกชื่อและดึงพิกัด',
+      icon: 'error',
+      confirmButtonText: 'ตกลง',
+      background: '#000',
+      color: '#00ff00'
+    });
+    return;
+  }
 
-                if (!response.ok) throw new Error('การเชื่อมต่อล้มเหลว');
+  const [latitude, longitude] = coordinates.split(',').map(Number);
+  const checkResult = checkAllLocations(latitude, longitude);
 
-                Swal.fire({
-                    title: 'สำเร็จ!',
-                    text: 'บันทึกข้อมูลเรียบร้อย',
-                    icon: 'success',
-                    confirmButtonText: 'ตกลง',
-                    background: '#000',
-                    color: '#00ff00'
-                });
-                form.reset();
-            } catch (error) {
-                Swal.fire({
-                    title: 'เกิดข้อผิดพลาด',
-                    text: 'ไม่สามารถบันทึกข้อมูลได้',
-                    icon: 'error',
-                    confirmButtonText: 'ตกลง',
-                    background: '#000',
-                    color: '#00ff00'
-                });
-            }
-        });
+  if (!checkResult.valid) {
+    Swal.fire({
+      title: 'ไม่อยู่ในพื้นที่เช็คอิน',
+      text: `คุณอยู่นอกพื้นที่เช็คอินที่กำหนด (รัศมีอนุญาต: ${CHECK_POINTS.map(p => p.radius + 'm').join('/')})`,
+      icon: 'error',
+      confirmButtonText: 'ตกลง',
+      background: '#000',
+      color: '#00ff00'
+    });
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      name: name,
+      latitude: latitude,
+      longitude: longitude,
+      check_point: checkResult.pointName,
+      distance: checkResult.distance.toFixed(2)
+    });
+
+    const response = await fetch(`${scriptURL}?${params.toString()}`);
+    if (!response.ok) throw new Error('การเชื่อมต่อล้มเหลว');
+
+    Swal.fire({
+      title: 'สำเร็จ!',
+      text: 'บันทึกข้อมูลเรียบร้อย',
+      icon: 'success',
+      confirmButtonText: 'ตกลง',
+      background: '#000',
+      color: '#00ff00'
+    });
+    form.reset();
+  } catch (error) {
+    Swal.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: 'ไม่สามารถบันทึกข้อมูลได้',
+      icon: 'error',
+      confirmButtonText: 'ตกลง',
+      background: '#000',
+      color: '#00ff00'
+    });
+  }
+});
     </script>
 </body>
 </html>
