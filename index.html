@@ -2,25 +2,46 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ตำแหน่งจุดตรวจ</title>
     <!-- เพิ่ม CSS ของ Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* กำหนดขนาดแผนที่ */
-        #map {
-            height: 500px;
-            width: 100%;
+        /* รีเซ็ต margin และ padding ของหน้าเว็บ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+        }
+        
+        /* กำหนดให้แผนที่เต็มหน้าจอ */
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
         /* ปรับแต่ง Popup */
         .leaflet-popup-content {
-            font-size: 14px;
-            font-family: Arial, sans-serif;
+            font-size: 16px;
+            font-family: 'Kanit', Arial, sans-serif;
+            padding: 5px;
         }
     </style>
+    <!-- เพิ่มฟอนต์ Kanit สำหรับภาษาไทย -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400&display=swap" rel="stylesheet">
 </head>
 <body>
-    
     <div id="map"></div>
 
     <!-- เพิ่ม JavaScript ของ Leaflet -->
@@ -30,11 +51,21 @@
         var center = [16.8725, 99.1315];
 
         // สร้างแผนที่และตั้งค่าพื้นหลังเป็น OpenStreetMap
-        var map = L.map('map').setView(center, 16); // 16 คือระดับการซูม
+        var map = L.map('map', {
+            center: center,
+            zoom: 16,
+            zoomControl: true,
+            attributionControl: true,
+            dragging: true,
+            touchZoom: true,
+            doubleClickZoom: true,
+            scrollWheelZoom: true
+        });
 
         // ใช้ OpenStreetMap เป็นพื้นหลัง
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
         }).addTo(map);
 
         // ตำแหน่งที่ปักหมุด
@@ -51,8 +82,20 @@
             // สร้าง Marker และ Popup
             var marker = L.marker([location.lat, location.lng])
                 .addTo(map)
-                .bindPopup(location.title); // แสดงข้อความเมื่อคลิกที่ Marker
-                
+                .bindPopup(location.title, {
+                    closeButton: true,
+                    closeOnClick: true
+                });
+        });
+
+        // ป้องกันการเด้งของหน้าจอบน iOS
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        // รีเซ็ตขนาดแผนที่เมื่อหมุนหน้าจอ
+        window.addEventListener('resize', function() {
+            map.invalidateSize();
         });
     </script>
 </body>
