@@ -3,355 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSM Check-in</title>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>ตำแหน่งจุดตรวจ</title>
+    <!-- เพิ่ม CSS ของ Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* CSS Styles เหมือนเดิม */
-        @keyframes neonGlow {
-            0% { box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
-            50% { box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00; }
-            100% { box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
-        }
-
-        @keyframes textNeonGlow {
-            0% { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
-            50% { text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00; }
-            100% { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00; }
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background-color: #000000;
-        }
-
-        .container {
-            background: rgba(20, 20, 20, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 8px 32px rgba(0, 255, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            color: #00ff00;
-            margin-bottom: 30px;
-            font-size: 28px;
-            text-align: center;
-            position: relative;
-            animation: textNeonGlow 2s ease-in-out infinite;
-        }
-
-        .input-group {
-            position: relative;
-            margin-bottom: 25px;
-        }
-
-        label {
-            font-size: 14px;
-            color: #00ff00;
-            position: absolute;
-            top: -20px;
-            left: 10px;
-            transition: all 0.3s ease;
-        }
-
-        input {
+        /* กำหนดขนาดแผนที่ */
+        #map {
+            height: 500px;
             width: 100%;
-            padding: 15px;
-            border: 2px solid #00ff00;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: transparent;
-            box-sizing: border-box;
-            color: #00ff00;
         }
-
-        input:focus {
-            border-color: #00ff00;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
-            outline: none;
-        }
-
-        button {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #00ff00;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-            position: relative;
-            background: transparent;
-            color: #00ff00;
-            animation: neonGlow 2s ease-in-out infinite;
-        }
-
-        button:hover {
-            background: rgba(0, 255, 0, 0.1);
-        }
-
-        .location-icon {
-            font-size: 24px;
-            margin-right: 10px;
-            display: inline-block;
-            color: #00ff00;
-        }
-
-        .footer {
-            text-align: center;
-            color: #00ff00;
-            margin-top: 20px;
-        }
-
-        .footer p {
-            margin: 5px 0;
+        /* ปรับแต่ง Popup */
+        .leaflet-popup-content {
             font-size: 14px;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 20px;
-            }
-            
-            h2 {
-                font-size: 24px;
-            }
+            font-family: Arial, sans-serif;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2><i class="fas fa-map-marker-alt location-icon"></i>TSM Check-in</h2>
-        <form id="locationForm">
-            <div class="input-group">
-                <label for="name">ชื่อ-นามสกุล</label>
-                <input type="text" id="name" name="name" required>
-            </div>
+    <h1>ตำแหน่งจุดตรวจ</h1>
+    <div id="map"></div>
 
-            <div class="input-group">
-                <label for="coordinates">พิกัด (ละติจูด, ลองจิจูด)</label>
-                <input type="text" id="coordinates" name="coordinates" readonly>
-            </div>
-
-            <button type="button" onclick="getLocation()" class="btn-info">
-                <i class="fas fa-location-crosshairs"></i> ดึงพิกัดอัตโนมัติ
-            </button>
-            
-            <button type="submit" class="btn-submit">
-                <i class="fas fa-save"></i> บันทึกข้อมูล
-            </button>
-        </form>
-    </div>
-
-    <div class="footer">
-        <p>ออกแบบและพัฒนาโดย</p>
-        <p>นักวิชาการโสตฯ ศุภฤกษ์ เนตรแก้ว</p>
-        <p>รพ.สมเด็จพระเจ้าตากสินมหาราช</p>
-    </div>
-
+    <!-- เพิ่ม JavaScript ของ Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // ตั้งค่า Google Apps Script URL
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbxVJtudp6hjpSc4EtmXUPFbPk-Wzime-SJ7snGuEWm_cpQ_IfdTI54XuTYN-ArSVaOFtQ/exec';
-        
-        // ตั้งค่าจุดเช็คอิน (สามารถเพิ่มได้หลายจุด)
-        const CHECK_POINTS = [
-            {
-                name: "จุดเช็คอิน 1",
-                lat: 16.872816, // ละติจูดของจุดเช็คอิน 1
-                lng: 99.131639, // ลองจิจูดของจุดเช็คอิน 1
-                radius: 200 // รัศมีที่อนุญาต (เมตร)
-            },
-            {
-                name: "จุดเช็คอิน 2",
-                lat: 16.872282, // ละติจูดของจุดเช็คอิน 2
-                lng: 99.131993, // ลองจิจูดของจุดเช็คอิน 2
-                radius: 400 // รัศมีที่อนุญาต (เมตร)
-            }
+        // ตำแหน่งเริ่มต้นของแผนที่ (ศูนย์กลางแผนที่)
+        var center = [16.8725, 99.1315];
+
+        // สร้างแผนที่และตั้งค่าพื้นหลังเป็น OpenStreetMap
+        var map = L.map('map').setView(center, 16); // 16 คือระดับการซูม
+
+        // ใช้ OpenStreetMap เป็นพื้นหลัง
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // ตำแหน่งที่ปักหมุด
+        var locations = [
+            { id: 1, lat: 16.872816, lng: 99.131639, title: 'จุดเช็คอินที่ 1 ชั้น6' },
+            { id: 2, lat: 16.872282, lng: 99.131993, title: 'จุดเช็คอินที่ 2 จิตเวช' },
+            { id: 3, lat: 16.871938, lng: 99.131749, title: 'จุดเช็คอินที่ 3 ห้องสมุดศูนย์แพทย์' },
+            { id: 4, lat: 16.873080, lng: 99.130937, title: 'จุดเช็คอินที่ 4 พัสดุ' },
+            { id: 5, lat: 16.872666, lng: 99.132061, title: 'จุดเช็คอินที่ 5 มูลนิธิ' }
         ];
 
-        // ฟังก์ชันคำนวณระยะทางระหว่างสองจุด
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // รัศมีของโลก (เมตร)
-            const φ1 = lat1 * Math.PI / 180; // แปลงละติจูดจุดที่ 1 เป็นเรเดียน
-            const φ2 = lat2 * Math.PI / 180; // แปลงละติจูดจุดที่ 2 เป็นเรเดียน
-            const Δφ = (lat2 - lat1) * Math.PI / 180; // ความแตกต่างของละติจูด
-            const Δλ = (lon2 - lon1) * Math.PI / 180; // ความแตกต่างของลองจิจูด
+        // ปักหมุดตำแหน่งต่างๆ
+        locations.forEach(function(location) {
+            L.marker([location.lat, location.lng])
+                .addTo(map)
+                .bindPopup(location.title); // แสดงข้อความเมื่อคลิกที่ Marker
+        });
 
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            return R * c; // คืนค่าระยะทาง (เมตร)
-        }
-
-        // ฟังก์ชันตรวจสอบว่าอยู่ในจุดเช็คอินหรือไม่
-        function checkAllLocations(latitude, longitude) {
-            for (const point of CHECK_POINTS) {
-                const distance = calculateDistance(latitude, longitude, point.lat, point.lng);
-                if (distance <= point.radius) {
-                    return {
-                        valid: true,
-                        pointName: point.name,
-                        distance: distance
-                    };
-                }
-            }
-            return { valid: false };
-        }
-
-        // ฟังก์ชันดึงตำแหน่งปัจจุบัน
-        function getLocation() {
-            Swal.fire({
-                title: 'กำลังตรวจสอบพิกัด...',
-                text: 'โปรดรอสักครู่',
-                allowOutsideClick: false,
-                background: '#000',
-                color: '#00ff00',
-                didOpen: () => Swal.showLoading()
-            });
-
+        // ตรวจจับตำแหน่งปัจจุบัน
+        if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const latitude = position.coords.latitude;
-                    const longitude = position.coords.longitude;
-                    document.getElementById('coordinates').value = `${latitude.toFixed(8)}, ${longitude.toFixed(8)}`;
+                function(position) {
+                    var userLat = position.coords.latitude;
+                    var userLng = position.coords.longitude;
 
-                    const checkResult = checkAllLocations(latitude, longitude);
+                    // ปักหมุดตำแหน่งของฉัน
+                    var myMarker = L.marker([userLat, userLng], {
+                        icon: L.icon({
+                            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34]
+                        })
+                    }).addTo(map)
+                      .bindPopup("📍 ตำแหน่งของคุณ");
 
-                    if (checkResult.valid) {
-                        Swal.fire({
-                            title: 'ดึงพิกัดสำเร็จ',
-                            text: `คุณอยู่ในพื้นที่: ${checkResult.pointName} (ระยะห่าง: ${checkResult.distance.toFixed(2)} เมตร)`,
-                            icon: 'success',
-                            confirmButtonText: 'ตกลง',
-                            background: '#000',
-                            color: '#00ff00'
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'ไม่อยู่ในพื้นที่เช็คอิน',
-                            text: 'คุณอยู่นอกพื้นที่เช็คอินที่กำหนด',
-                            icon: 'warning',
-                            confirmButtonText: 'ตกลง',
-                            background: '#000',
-                            color: '#00ff00'
-                        });
-                    }
+                    // เลื่อนแผนที่ไปยังตำแหน่งของคุณ
+                    map.setView([userLat, userLng], 16);
                 },
-                (error) => {
-                    Swal.fire({
-                        title: 'เกิดข้อผิดพลาด',
-                        text: 'ไม่สามารถดึงพิกัดได้',
-                        icon: 'error',
-                        confirmButtonText: 'ตกลง',
-                        background: '#000',
-                        color: '#00ff00'
-                    });
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                function(error) {
+                    console.error("ไม่สามารถดึงพิกัด GPS ได้", error);
+                }
             );
+        } else {
+            console.error("เบราว์เซอร์ของคุณไม่รองรับ Geolocation");
         }
-
-        // ฟังก์ชันบันทึกข้อมูล
-        const form = document.getElementById('locationForm');
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const name = document.getElementById('name').value;
-            const coordinates = document.getElementById('coordinates').value;
-
-            if (!name || !coordinates) {
-                Swal.fire({
-                    title: 'ข้อมูลไม่ครบถ้วน',
-                    text: 'กรุณากรอกชื่อและดึงพิกัด',
-                    icon: 'error',
-                    confirmButtonText: 'ตกลง',
-                    background: '#000',
-                    color: '#00ff00'
-                });
-                return;
-            }
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const name = document.getElementById('name').value;
-  const coordinates = document.getElementById('coordinates').value;
-
-  if (!name || !coordinates) {
-    Swal.fire({
-      title: 'ข้อมูลไม่ครบถ้วน',
-      text: 'กรุณากรอกชื่อและดึงพิกัด',
-      icon: 'error',
-      confirmButtonText: 'ตกลง',
-      background: '#000',
-      color: '#00ff00'
-    });
-    return;
-  }
-
-  const [latitude, longitude] = coordinates.split(',').map(Number);
-  const checkResult = checkAllLocations(latitude, longitude);
-
-  if (!checkResult.valid) {
-    Swal.fire({
-      title: 'ไม่อยู่ในพื้นที่เช็คอิน',
-      text: `คุณอยู่นอกพื้นที่เช็คอินที่กำหนด (รัศมีอนุญาต: ${CHECK_POINTS.map(p => p.radius + 'm').join('/')})`,
-      icon: 'error',
-      confirmButtonText: 'ตกลง',
-      background: '#000',
-      color: '#00ff00'
-    });
-    return;
-  }
-
-  try {
-    const params = new URLSearchParams({
-      name: name,
-      latitude: latitude,
-      longitude: longitude,
-      check_point: checkResult.pointName,
-      distance: checkResult.distance.toFixed(2)
-    });
-
-    const response = await fetch(`${scriptURL}?${params.toString()}`);
-    if (!response.ok) throw new Error('การเชื่อมต่อล้มเหลว');
-
-    Swal.fire({
-      title: 'สำเร็จ!',
-      text: 'บันทึกข้อมูลเรียบร้อย',
-      icon: 'success',
-      confirmButtonText: 'ตกลง',
-      background: '#000',
-      color: '#00ff00'
-    });
-    form.reset();
-  } catch (error) {
-    Swal.fire({
-      title: 'เกิดข้อผิดพลาด',
-      text: 'ไม่สามารถบันทึกข้อมูลได้',
-      icon: 'error',
-      confirmButtonText: 'ตกลง',
-      background: '#000',
-      color: '#00ff00'
-    });
-  }
-});
     </script>
 </body>
 </html>
