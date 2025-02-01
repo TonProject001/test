@@ -26,11 +26,9 @@
     <!-- เพิ่ม JavaScript ของ Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // ตำแหน่งเริ่มต้นของแผนที่ (ศูนย์กลางแผนที่)
+        // ตำแหน่งเริ่มต้นของแผนที่
         var center = [16.8725, 99.1315];
-
-        // สร้างแผนที่และตั้งค่าพื้นหลังเป็น OpenStreetMap
-        var map = L.map('map').setView(center, 16); // 16 คือระดับการซูม
+        var map = L.map('map').setView(center, 16);
 
         // ใช้ OpenStreetMap เป็นพื้นหลัง
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -50,36 +48,34 @@
         locations.forEach(function(location) {
             L.marker([location.lat, location.lng])
                 .addTo(map)
-                .bindPopup(location.title); // แสดงข้อความเมื่อคลิกที่ Marker
+                .bindPopup(location.title);
         });
 
-        // ตรวจจับตำแหน่งปัจจุบัน
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    var userLat = position.coords.latitude;
-                    var userLng = position.coords.longitude;
+        // เพิ่ม Marker ตำแหน่งปัจจุบัน
+        var userMarker = L.marker(center, {
+            icon: L.icon({
+                iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x-blue.png",
+                iconSize: [25, 41], // ขนาดไอคอน
+                iconAnchor: [12, 41], // จุดยึดไอคอน
+                popupAnchor: [1, -34]
+            })
+        }).addTo(map).bindPopup("ตำแหน่งของคุณ").openPopup();
 
-                    // ปักหมุดตำแหน่งของฉัน
-                    var myMarker = L.marker([userLat, userLng], {
-                        icon: L.icon({
-                            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-                            iconSize: [25, 41],
-                            iconAnchor: [12, 41],
-                            popupAnchor: [1, -34]
-                        })
-                    }).addTo(map)
-                      .bindPopup("📍 ตำแหน่งของคุณ");
+        // อัปเดตตำแหน่ง GPS แบบเรียลไทม์
+        function updateLocation(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            userMarker.setLatLng([lat, lng]); // อัปเดตตำแหน่ง Marker
+            map.setView([lat, lng], 16); // ซูมไปยังตำแหน่งใหม่
+        }
 
-                    // เลื่อนแผนที่ไปยังตำแหน่งของคุณ
-                    map.setView([userLat, userLng], 16);
-                },
-                function(error) {
-                    console.error("ไม่สามารถดึงพิกัด GPS ได้", error);
-                }
-            );
+        // ตรวจจับตำแหน่ง GPS
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(updateLocation, function(error) {
+                console.log("ไม่สามารถรับพิกัด GPS ได้:", error.message);
+            });
         } else {
-            console.error("เบราว์เซอร์ของคุณไม่รองรับ Geolocation");
+            alert("เบราว์เซอร์ของคุณไม่รองรับ Geolocation");
         }
     </script>
 </body>
